@@ -29,6 +29,12 @@ public class CareersSearchPage : BasePage
     private readonly By jobCards =
         By.CssSelector("[data-testid='job-card-link']");
 
+    private readonly By preloader =
+        By.CssSelector("div.Preloader_fullSize__jIIky");
+
+    private readonly By body =
+        By.TagName("body");
+
     private bool overlayWasVisible;
 
     public CareersSearchPage(IWebDriver driver, WebDriverWait wait)
@@ -216,33 +222,37 @@ public class CareersSearchPage : BasePage
         });
     }
 
-    //public int GetJobCardsCount()
-    //{
-    //    // важно: дождаться, что карточки вообще есть
-    //    this.wait.Until(driver =>
-    //    {
-    //        IReadOnlyCollection<IWebElement> cards =
-    //            driver.FindElements(this.jobCards);
-    //        return cards.Count > 0;
-    //    });
+    public void WaitForJobPageLoaded()
+    {
+        this.wait.Until(driver =>
+        {
+            IReadOnlyCollection<IWebElement> preloaders =
+                driver.FindElements(this.preloader);
 
-    //    return this.driver.FindElements(this.jobCards).Count;
-    //}
+            return preloaders.Count == 0 ||
+                   preloaders.All(preloader => !preloader.Displayed);
+        });
 
-    //public void WaitForJobCardsCountChangedFrom(int previousCount)
-    //{
-    //    this.wait.Until(driver =>
-    //    {
-    //        // сперва дождаться исчезновения оверлея (если он есть)
-    //        IReadOnlyCollection<IWebElement> overlays =
-    //            driver.FindElements(this.searchOverlay);
-    //        if (overlays.Any(o => o.Displayed)) return false;
+        this.wait.Until(driver =>
+        {
+            IReadOnlyCollection<IWebElement> elements =
+                driver.FindElements(this.body);
 
-    //        IReadOnlyCollection<IWebElement> cards =
-    //            driver.FindElements(this.jobCards);
+            return elements.Count > 0 && elements.First().Displayed;
+        });
+    }
 
-    //        // Ждём: либо карточек стало меньше/больше, либо появились/исчезли
-    //        return cards.Count > 0 && cards.Count != previousCount;
-    //    });
-    //}
+    public string GetPageText()
+    {
+        return this.wait.Until(driver =>
+        {
+            IReadOnlyCollection<IWebElement> elements =
+                driver.FindElements(this.body);
+
+            return elements.Count > 0 && elements.First().Displayed
+                ? elements.First().Text
+                : null;
+        });
+    }
+
 }

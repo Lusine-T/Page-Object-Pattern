@@ -1,0 +1,180 @@
+using OpenQA.Selenium;
+using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using Page_Objects_Pattern.Pages;
+
+namespace Page_Objects_Pattern;
+
+public class InsightsPage : BasePage
+{
+    private readonly By insightsLink =
+        By.LinkText("Insights");
+
+    private readonly By activeSlide =
+        By.CssSelector(".owl-item.active[aria-hidden='false']");
+
+    private readonly By nextSlideButton =
+        By.CssSelector("button.slider__right-arrow");
+
+    private readonly By carouselTitle =
+        By.CssSelector(".single-slide__content .text p");
+
+    private readonly By readMoreLink =
+        By.CssSelector("a.slider-cta-link");
+
+    private readonly By articleTitle =
+        By.CssSelector(".header_and_download h1");
+
+    public InsightsPage(IWebDriver driver, WebDriverWait wait)
+        : base(driver, wait)
+    {
+    }
+
+    public void OpenInsights()
+    {
+        AcceptCookiesIfPresent();
+
+        IWebElement insights = this.wait.Until(driver =>
+        {
+            IReadOnlyCollection<IWebElement> elements =
+                driver.FindElements(this.insightsLink);
+
+            return elements.FirstOrDefault(
+                element => element.Displayed && element.Enabled);
+        });
+
+        insights.Click();
+
+        this.wait.Until(driver =>
+            driver.Url.Contains("/insights", StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void SwipeCarousel(int times)
+    {
+        if (times < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(times));
+        }
+
+        for (int i = 0; i < times; i++)
+        {
+            IWebElement currentSlide = this.GetActiveSlide();
+
+            IWebElement nextButton = this.wait.Until(driver =>
+            {
+                IReadOnlyCollection<IWebElement> elements =
+                    driver.FindElements(this.nextSlideButton);
+
+                return elements.FirstOrDefault(
+                    element => element.Displayed && element.Enabled);
+            });
+
+            nextButton.Click();
+
+            this.WaitForSlideChange(currentSlide);
+        }
+    }
+
+    public string GetCurrentArticleTitle()
+    {
+        IWebElement slide = this.GetActiveSlide();
+
+        IWebElement title = this.wait.Until(driver =>
+        {
+            try
+            {
+                IWebElement element =
+                    slide.FindElement(this.carouselTitle);
+
+                return element.Displayed && !string.IsNullOrWhiteSpace(element.Text)
+                    ? element
+                    : null;
+            }
+            catch (StaleElementReferenceException)
+            {
+                return null;
+            }
+        });
+
+        return title.Text.Trim();
+    }
+
+    public void ClickReadMore()
+    {
+        IWebElement slide = this.GetActiveSlide();
+
+        IWebElement readMore = this.wait.Until(driver =>
+        {
+            try
+            {
+                IWebElement element =
+                    slide.FindElement(this.readMoreLink);
+
+                return element.Displayed && element.Enabled
+                    ? element
+                    : null;
+            }
+            catch (StaleElementReferenceException)
+            {
+                return null;
+            }
+        });
+
+        readMore.Click();
+
+        this.wait.Until(driver =>
+            driver.FindElements(this.articleTitle)
+                .Any(element =>
+                    element.Displayed &&
+                    !string.IsNullOrWhiteSpace(element.Text)));
+    }
+
+    public string GetArticleTitle()
+    {
+        IWebElement title = this.wait.Until(driver =>
+        {
+            IReadOnlyCollection<IWebElement> elements =
+                driver.FindElements(this.articleTitle);
+
+            return elements.FirstOrDefault(
+                element =>
+                    element.Displayed &&
+                    !string.IsNullOrWhiteSpace(element.Text));
+        });
+
+        return title.Text.Trim();
+    }
+
+    private IWebElement GetActiveSlide()
+    {
+        return this.wait.Until(driver =>
+        {
+            IReadOnlyCollection<IWebElement> elements =
+                driver.FindElements(this.activeSlide);
+
+            return elements.FirstOrDefault(
+                element => element.Displayed);
+        });
+    }
+
+    private void WaitForSlideChange(IWebElement previousSlide)
+    {
+        this.wait.Until(driver =>
+        {
+            try
+            {
+                IReadOnlyCollection<IWebElement> slides =
+                    driver.FindElements(this.activeSlide);
+
+                return slides.Count > 0 &&
+                       slides.Any(slide =>
+                           slide.Displayed &&
+                           !slide.Equals(previousSlide));
+            }
+            catch (StaleElementReferenceException)
+            {
+                return true;
+            }
+        });
+    }
+}

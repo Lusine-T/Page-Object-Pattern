@@ -60,6 +60,9 @@ public class InsightsPage : BasePage
         {
             string previousTitle = this.GetCurrentArticleTitle();
 
+            TestContext.WriteLine(
+                $"BEFORE CLICK {i + 1}: '{previousTitle}'");
+
             IWebElement nextButton = this.wait.Until(driver =>
             {
                 IReadOnlyCollection<IWebElement> elements =
@@ -72,6 +75,11 @@ public class InsightsPage : BasePage
             nextButton.Click();
 
             this.WaitForSlideChange(previousTitle);
+
+            string currentTitle = this.GetCurrentArticleTitle();
+
+            TestContext.WriteLine(
+                $"AFTER CLICK {i + 1}: '{currentTitle}'");
         }
     }
 
